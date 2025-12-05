@@ -1,0 +1,69 @@
+#!/bin/bash
+
+# niri-menu-keybindings: Display Niri keybindings in fuzzel
+# Parses config.kdl and presents with refined styling
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Fuzzel options - Noctalia shell color scheme
+# ─────────────────────────────────────────────────────────────────────────────
+FUZZEL_OPTS=(
+    "--font=JetBrainsMono Nerd Font:size=11"
+    "--background=282828e6"           # mSurface with ~90% opacity
+    "--text-color=fbf1c7ff"           # mOnSurface
+    "--selection-color=3c3836e6"      # mSurfaceVariant
+    "--selection-text-color=b8bb26ff" # mPrimary (green)
+    "--border-color=57514eff"         # mOutline
+    "--match-color=fabd2fff"          # mSecondary (yellow)
+    "--horizontal-pad=16"
+    "--vertical-pad=12"
+    "--inner-pad=8"
+)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Parse keybindings from Niri config
+# ─────────────────────────────────────────────────────────────────────────────
+
+NIRI_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/niri/config.kdl"
+
+parse_bindings() {
+    if [[ ! -f "$NIRI_CONFIG" ]]; then
+        echo "󰀦  Config not found: $NIRI_CONFIG"
+        return 1
+    fi
+
+    grep -E "^\s+MOD|^\s+CTRL|^\s+ALT|^\s+XF86" "$NIRI_CONFIG" 2>/dev/null | \
+    sed -E \
+        -e 's/^\s+//' \
+        -e 's/hotkey-overlay-title="([^"]*)"\s*//' \
+        -e 's/\{[[:space:]]*/󰁔 /' \
+        -e 's/;[[:space:]]*\}//' \
+        -e 's/spawn-sh "/󰆍 /' \
+        -e 's/spawn "/󰆍 /' \
+        -e 's/"$//' | \
+    awk -F'󰁔' '{
+        key = $1
+        action = $2
+        gsub(/[[:space:]]+$/, "", key)
+        gsub(/^[[:space:]]+/, "", action)
+        if (action != "") {
+            printf "󰌌 %-28s 󰁔 %s\n", key, action
+        }
+    }' | sort -u
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Main
+# ─────────────────────────────────────────────────────────────────────────────
+
+bindings=$(parse_bindings)
+
+if [[ -z "$bindings" ]]; then
+    notify-send "󰌌  Keybindings" "No keybindings found"
+    exit 1
+fi
+
+echo "$bindings" | fuzzel --dmenu \
+    --width 70 \
+    --lines 20 \
+    --prompt " 󰌌 Keybindings  " \
+    "${FUZZEL_OPTS[@]}"

@@ -1,0 +1,147 @@
+#!/bin/bash
+
+# niri-menu: Omarchy-style system menu for Niri
+# Uses fuzzel with refined aesthetics and JetBrainsMono Nerd Font
+
+export PATH="$HOME/garbage/editniri/niri-omarchy-port/bin:$PATH"
+
+BACK_TO_EXIT=false
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Fuzzel options - Noctalia shell color scheme
+# ─────────────────────────────────────────────────────────────────────────────
+FUZZEL_OPTS=(
+    "--font=JetBrainsMono Nerd Font:size=12"
+    "--background=282828e6"           # mSurface with ~90% opacity
+    "--text-color=fbf1c7ff"           # mOnSurface
+    "--selection-color=3c3836e6"      # mSurfaceVariant
+    "--selection-text-color=b8bb26ff" # mPrimary (green)
+    "--border-color=57514eff"         # mOutline
+    "--match-color=fabd2fff"          # mSecondary (yellow)
+    "--horizontal-pad=16"
+    "--vertical-pad=12"
+    "--inner-pad=8"
+)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Helper Functions
+# ─────────────────────────────────────────────────────────────────────────────
+
+back_to() {
+    local parent_menu="$1"
+    if [[ "$BACK_TO_EXIT" == "true" ]]; then
+        exit 0
+    elif [[ -n "$parent_menu" ]]; then
+        "$parent_menu"
+    else
+        show_main_menu
+    fi
+}
+
+menu() {
+    local prompt="$1"
+    local options="$2"
+    
+    echo -e "$options" | fuzzel --dmenu \
+        --width 40 \
+        --lines 10 \
+        --prompt " $prompt  " \
+        "${FUZZEL_OPTS[@]}" \
+        2>/dev/null
+}
+
+terminal() {
+    alacritty "$@"
+}
+
+present_terminal() {
+    niri-launch-or-focus-tui --floating --center --name presentation "bash -c '$1'"
+}
+
+open_in_editor() {
+    notify-send "󰏫  Editing" "$1"
+    "${EDITOR:-nvim}" "$1"
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Learn Menu - Nerd Font icons only
+# ─────────────────────────────────────────────────────────────────────────────
+
+show_learn_menu() {
+    case $(menu "Learn" "󰌌  Keybindings\n󰨡  Niri Wiki\n󰣇  Arch Wiki\n  Neovim Docs\n Bash Reference") in
+    *Keybindings*) niri-menu-keybindings ;;
+    *Niri*) xdg-open "https://github.com/YaLTeR/niri/wiki" ;;
+    *Arch*) xdg-open "https://wiki.archlinux.org/title/Main_page" ;;
+    *Neovim*) xdg-open "https://www.lazyvim.org/keymaps" ;;
+    *Bash*) xdg-open "https://devhints.io/bash" ;;
+    *) show_main_menu ;;
+    esac
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Style Menu
+# ─────────────────────────────────────────────────────────────────────────────
+
+show_style_menu() {
+    case $(menu "Style" "󰏘  Theme\n󰒓  Niri Config\n󱄅  Screensaver\n󰋽  About Text") in
+    *Theme*) show_theme_menu ;;
+    *Niri*) open_in_editor ~/.config/niri/config.kdl ;;
+    *Screensaver*) open_in_editor ~/.config/omarchy/branding/screensaver.txt ;;
+    *About*) open_in_editor ~/.config/omarchy/branding/about.txt ;;
+    *) show_main_menu ;;
+    esac
+}
+
+show_theme_menu() {
+    notify-send "󰏘  Theme" "Theme selection coming soon..."
+    back_to show_style_menu
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# System Menu
+# ─────────────────────────────────────────────────────────────────────────────
+
+show_system_menu() {
+    case $(menu "System" "󰌾  Lock Screen\n󱄅  Screensaver\n󰒲  Suspend\n󰜉  Restart\n󰐥  Shutdown") in
+    *Lock*) 
+        if command -v qs &>/dev/null; then
+            qs -c noctalia-shell ipc call lockScreen lock
+        else
+            swaylock
+        fi
+        ;;
+    *Screensaver*) niri-launch-screensaver force ;;
+    *Suspend*) systemctl suspend ;;
+    *Restart*) systemctl reboot ;;
+    *Shutdown*) systemctl poweroff ;;
+    *) back_to show_main_menu ;;
+    esac
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Main Menu
+# ─────────────────────────────────────────────────────────────────────────────
+
+show_main_menu() {
+    go_to_menu "$(menu "Menu" "󰠮  Learn\n󰃣  Style\n󰋽  About\n󰒓  System")"
+}
+
+go_to_menu() {
+    case "${1,,}" in
+    *learn*) show_learn_menu ;;
+    *style*) show_style_menu ;;
+    *about*) niri-launch-about ;;
+    *system*) show_system_menu ;;
+    esac
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Entry Point
+# ─────────────────────────────────────────────────────────────────────────────
+
+if [[ -n "$1" ]]; then
+    BACK_TO_EXIT=true
+    go_to_menu "$1"
+else
+    show_main_menu
+fi
