@@ -1,0 +1,185 @@
+#!/bin/bash
+
+# niri-tui-install: Create a .desktop file for a TUI (Terminal UI) app
+# The app will appear in the Noctalia launcher and can be floated or tiled
+#
+# Usage:
+#   Interactive: niri-tui-install
+#   Scripted:    niri-tui-install "App Name" "command" "float|tile" "https://icon-url"
+
+export PATH="$HOME/garbage/editniri/niri-omarchy-port/bin:$PATH"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Gruvbox-styled gum configuration
+# ─────────────────────────────────────────────────────────────────────────────
+export GUM_INPUT_CURSOR_FOREGROUND="#b8bb26"
+export GUM_INPUT_PROMPT_FOREGROUND="#fabd2f"
+export GUM_INPUT_PLACEHOLDER="#928374"
+export GUM_CHOOSE_CURSOR_FOREGROUND="#b8bb26"
+export GUM_CHOOSE_SELECTED_FOREGROUND="#b8bb26"
+export GUM_CHOOSE_HEADER_FOREGROUND="#83a598"
+export GUM_STYLE_FOREGROUND="#fbf1c7"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Parse arguments or prompt interactively
+# ─────────────────────────────────────────────────────────────────────────────
+if [[ "$#" -lt 4 ]]; then
+    # Interactive mode
+    echo ""
+    gum style \
+        --foreground "#83a598" \
+        --border-foreground "#57514e" \
+        --border double \
+        --padding "0 1" \
+        "󰆍  Create TUI App"
+    echo ""
+
+    APP_NAME=$(gum input --prompt "  Name > " --placeholder "My TUI App")
+    [[ -z "$APP_NAME" ]] && { echo "Cancelled."; exit 0; }
+
+    APP_EXEC=$(gum input --prompt "  Command > " --placeholder "lazydocker, btop, or 'bash -c \"dust; read -n1\"'")
+    [[ -z "$APP_EXEC" ]] && { echo "Cancelled."; exit 0; }
+
+    echo ""
+    echo "  Window style:"
+    WINDOW_STYLE=$(gum choose --cursor "  " "󰉧  Floating window" "󱇚  Tiled window")
+    [[ -z "$WINDOW_STYLE" ]] && { echo "Cancelled."; exit 0; }
+    
+    # Parse the choice
+    if [[ "$WINDOW_STYLE" == *"Floating"* ]]; then
+        WINDOW_STYLE="float"
+    else
+        WINDOW_STYLE="tile"
+    fi
+
+    ICON_URL=$(gum input --prompt "  Icon URL > " --placeholder "https://dashboardicons.com/... (PNG/SVG)")
+    [[ -z "$ICON_URL" ]] && { echo "Cancelled."; exit 0; }
+
+    INTERACTIVE_MODE=true
+else
+    # Scripted mode
+    APP_NAME="$1"
+    APP_EXEC="$2"
+    WINDOW_STYLE="$3"
+    ICON_URL="$4"
+    INTERACTIVE_MODE=false
+fi
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Validate inputs
+# ─────────────────────────────────────────────────────────────────────────────
+if [[ -z "$APP_NAME" || -z "$APP_EXEC" || -z "$ICON_URL" ]]; then
+    echo "Error: You must provide app name, command, and icon URL!"
+    exit 1
+fi
+
+# Validate window style
+if [[ "$WINDOW_STYLE" != "float" && "$WINDOW_STYLE" != "tile" ]]; then
+    echo "Error: Window style must be 'float' or 'tile'"
+    exit 1
+fi
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Setup directories
+# ─────────────────────────────────────────────────────────────────────────────
+ICON_DIR="$HOME/.local/share/applications/icons"
+DESKTOP_DIR="$HOME/.local/share/applications"
+mkdir -p "$ICON_DIR"
+
+# Sanitize app name for filename
+SAFE_NAME=$(echo "$APP_NAME" | tr '[:upper:]' '[:lower:]' | tr ' ' '-' | tr -cd '[:alnum:]-')
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Download or reference icon
+# ─────────────────────────────────────────────────────────────────────────────
+if [[ "$ICON_URL" =~ ^https?:// ]]; then
+    # Determine extension from URL
+    if [[ "$ICON_URL" == *.svg ]]; then
+        ICON_PATH="$ICON_DIR/${SAFE_NAME}.svg"
+    else
+        ICON_PATH="$ICON_DIR/${SAFE_NAME}.png"
+    fi
+    
+    if [[ "$INTERACTIVE_MODE" == "true" ]]; then
+        echo ""
+        gum spin --spinner dot --title "Downloading icon..." -- \
+            curl -sL -o "$ICON_PATH" "$ICON_URL"
+    else
+        curl -sL -o "$ICON_PATH" "$ICON_URL"
+    fi
+    
+    if [[ ! -f "$ICON_PATH" || ! -s "$ICON_PATH" ]]; then
+        echo "Error: Failed to download icon from $ICON_URL"
+        exit 1
+    fi
+elif [[ -f "$ICON_URL" ]]; then
+    # Local file reference
+    ICON_PATH="$ICON_URL"
+else
+    # Assume it's an icon name
+    ICON_PATH="$ICON_URL"
+fi
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Determine app class for Niri window rules
+# ─────────────────────────────────────────────────────────────────────────────
+# We use a specific app-id pattern that Niri can match for window rules
+if [[ "$WINDOW_STYLE" == "float" ]]; then
+    APP_CLASS="org.niri.TUI.float"
+else
+    APP_CLASS="org.niri.TUI.tile"
+fi
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Create .desktop file
+# ─────────────────────────────────────────────────────────────────────────────
+DESKTOP_FILE="$DESKTOP_DIR/${SAFE_NAME}.desktop"
+
+# Get the directory where this script lives (for full path resolution)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Build the exec command using niri-launch-tui for proper terminal handling
+# We use the app class for the --app-id so Niri window rules can match it
+# The --hold flag keeps the terminal open after one-shot commands finish
+EXEC_COMMAND="$SCRIPT_DIR/niri-launch-tui --hold --app-id $APP_CLASS $APP_EXEC"
+
+cat > "$DESKTOP_FILE" <<EOF
+[Desktop Entry]
+Version=1.0
+Name=$APP_NAME
+Comment=$APP_NAME TUI Application
+Exec=$EXEC_COMMAND
+Terminal=false
+Type=Application
+Icon=$ICON_PATH
+Categories=System;TerminalEmulator;
+StartupNotify=true
+StartupWMClass=$APP_CLASS
+EOF
+
+chmod +x "$DESKTOP_FILE"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Success message
+# ─────────────────────────────────────────────────────────────────────────────
+if [[ "$INTERACTIVE_MODE" == "true" ]]; then
+    echo ""
+    gum style \
+        --foreground "#b8bb26" \
+        --border-foreground "#57514e" \
+        --border rounded \
+        --padding "0 1" \
+        "✓ Created: $APP_NAME ($WINDOW_STYLE)"
+    echo ""
+    echo "  You can now find '$APP_NAME' in the Noctalia launcher (Mod+P)"
+    echo ""
+    
+    if [[ "$WINDOW_STYLE" == "float" ]]; then
+        echo "  󰉧  The app will open as a floating window"
+    else
+        echo "  󱇚  The app will open as a tiled window"
+    fi
+    echo ""
+else
+    echo "Created TUI app: $DESKTOP_FILE (style: $WINDOW_STYLE)"
+fi

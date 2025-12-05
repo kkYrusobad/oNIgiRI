@@ -1,0 +1,56 @@
+#!/bin/bash
+
+# niri-launch-webapp: Launch a URL as a web app (PWA-style)
+# Usage: niri-launch-webapp <URL> [extra browser args...]
+
+if [[ -z "$1" ]]; then
+    echo "Usage: niri-launch-webapp <URL> [extra browser args...]"
+    exit 1
+fi
+
+URL="$1"
+shift
+
+# Get the default web browser
+browser=$(xdg-settings get default-web-browser 2>/dev/null)
+
+# Determine the browser command based on the .desktop file
+case "$browser" in
+    google-chrome* | brave-browser* | microsoft-edge* | opera* | vivaldi* | helium* | chromium*)
+        # Chromium-based browsers support --app mode
+        ;;
+    *)
+        # Default to chromium if available, otherwise try to find a chromium-based browser
+        if command -v chromium &>/dev/null; then
+            browser="chromium.desktop"
+        elif command -v google-chrome-stable &>/dev/null; then
+            browser="google-chrome.desktop"
+        elif command -v brave &>/dev/null; then
+            browser="brave-browser.desktop"
+        else
+            # Fallback: just open URL in default browser (not as an app)
+            notify-send "󰖟  Web App" "No Chromium-based browser found. Opening in default browser..."
+            xdg-open "$URL"
+            exit 0
+        fi
+        ;;
+esac
+
+# Extract the executable from the .desktop file
+browser_exec=$(sed -n 's/^Exec=\([^ ]*\).*/\1/p' \
+    {~/.local,~/.nix-profile,/usr}/share/applications/"$browser" 2>/dev/null | head -1)
+
+if [[ -z "$browser_exec" ]]; then
+    # Try direct command names
+    case "$browser" in
+        google-chrome*) browser_exec="google-chrome-stable" ;;
+        chromium*) browser_exec="chromium" ;;
+        brave*) browser_exec="brave" ;;
+        microsoft-edge*) browser_exec="microsoft-edge-stable" ;;
+        vivaldi*) browser_exec="vivaldi" ;;
+        *) browser_exec="chromium" ;;
+    esac
+fi
+
+# Launch in app mode
+exec setsid "$browser_exec" --app="$URL" "$@" &>/dev/null &

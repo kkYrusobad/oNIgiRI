@@ -331,6 +331,32 @@ binds {
         default-column-width { fixed 600; }
     }
 
+    // TUI Apps - Floating style (created by niri-tui-install --float)
+    window-rule {
+        match app-id=r#"^org\.niri\.TUI\.float$"#
+        open-floating true
+        default-column-width { fixed 800; }
+    }
+
+    // TUI Apps - Tiled style (created by niri-tui-install --tile)
+    window-rule {
+        match app-id=r#"^org\.niri\.TUI\.tile$"#
+        // Opens as normal tiled window
+    }
+
+    // Installer windows (web app and TUI app creators)
+    window-rule {
+        match app-id=r#"^org\.niri\.WebAppInstall$"#
+        open-floating true
+        default-column-width { fixed 600; }
+    }
+
+    window-rule {
+        match app-id=r#"^org\.niri\.TUIInstall$"#
+        open-floating true
+        default-column-width { fixed 600; }
+    }
+
     window-rule {
         geometry-corner-radius 10 // Set every window radius to 20
         clip-to-geometry true

@@ -68,7 +68,7 @@ open_in_editor() {
 # ─────────────────────────────────────────────────────────────────────────────
 
 show_learn_menu() {
-    case $(menu "Learn" "󰌌  Keybindings\n󰨡  Niri Wiki\n󰣇  Arch Wiki\n  Neovim Docs\n Bash Reference") in
+    case $(menu "Learn" "󰌌  Keybindings\n󰨡  Niri Wiki\n󰣇  Arch Wiki\n  Neovim Docs\n  Bash Reference") in
     *Keybindings*) niri-menu-keybindings ;;
     *Niri*) xdg-open "https://github.com/YaLTeR/niri/wiki" ;;
     *Arch*) xdg-open "https://wiki.archlinux.org/title/Main_page" ;;
@@ -176,19 +176,35 @@ show_power_profile_menu() {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Install Menu
+# ─────────────────────────────────────────────────────────────────────────────
+
+show_install_menu() {
+    case $(menu "Install" "󰖟  Web App\n󰆍  TUI App") in
+    *Web*) niri-launch-or-focus-tui --floating --center --name WebAppInstall niri-webapp-install ;;
+    *TUI*) niri-launch-or-focus-tui --floating --center --name TUIInstall niri-tui-install ;;
+    *) show_main_menu ;;
+    esac
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Main Menu
 # ─────────────────────────────────────────────────────────────────────────────
 
 show_main_menu() {
-    go_to_menu "$(menu "Menu" "󰠮  Learn\n󰹑  Trigger\n󰃣  Style\n󰒓  Setup\n󰋽  About\n  System")"
+    #go_to_menu "$(menu "Menu" "󰀻  Apps\n󱍕  My Apps\n󰠮  Learn\n󰹑  Trigger\n󰃣  Style\n󰒓  Setup\n󰉉  Install\n󰋽  About\n  System")"
+    go_to_menu "$(menu "󰻀" "󱍕  My Apps\n󰠮  Learn\n󰹑  Trigger\n󰃣  Style\n󰒓  Setup\n󰉉  Install\n󰋽  About\n  System")"
 }
 
 go_to_menu() {
     case "${1,,}" in
+    *my*apps*) niri-custom-apps-menu ;;
+    #*apps*) niri-apps-menu ;;
     *learn*) show_learn_menu ;;
     *trigger*) show_trigger_menu ;;
     *style*) show_style_menu ;;
     *setup*) show_setup_menu ;;
+    *install*) show_install_menu ;;
     *about*) niri-launch-about ;;
     *system*) show_system_menu ;;
     esac

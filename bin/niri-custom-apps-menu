@@ -1,0 +1,139 @@
+#!/bin/bash
+
+# niri-custom-apps-menu: Browse and launch custom-created web/TUI apps using fuzzel
+# Only shows apps from ~/.local/share/applications (user-created apps)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Fuzzel options - Noctalia shell color scheme with icons
+# ─────────────────────────────────────────────────────────────────────────────
+FUZZEL_OPTS=(
+    "--font=JetBrainsMono Nerd Font:size=12"
+    "--background=282828e6"           # mSurface with ~90% opacity
+    "--text-color=fbf1c7ff"           # mOnSurface
+    "--selection-color=3c3836e6"      # mSurfaceVariant
+    "--selection-text-color=b8bb26ff" # mPrimary (green)
+    "--border-color=57514eff"         # mOutline
+    "--match-color=fabd2fff"          # mSecondary (yellow)
+    "--horizontal-pad=16"
+    "--vertical-pad=12"
+    "--inner-pad=8"
+    "--icon-theme=Papirus"            # Use Papirus icons (fallback to hicolor)
+)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Only look at user's custom apps directory
+# ─────────────────────────────────────────────────────────────────────────────
+USER_APPS_DIR="$HOME/.local/share/applications"
+
+if [[ ! -d "$USER_APPS_DIR" ]]; then
+    notify-send "My Apps" "No custom apps found. Create one with Menu → Install!" -i dialog-information
+    exit 0
+fi
+
+declare -A apps   # Associative array: display_name -> desktop_file_path
+declare -A icons  # Associative array: display_name -> icon_name
+
+for desktop_file in "$USER_APPS_DIR"/*.desktop; do
+    [[ -f "$desktop_file" ]] || continue
+    
+    # Skip hidden apps (NoDisplay=true)
+    if grep -q "^NoDisplay=true" "$desktop_file" 2>/dev/null; then
+        continue
+    fi
+    
+    # Skip apps without Exec line
+    if ! grep -q "^Exec=" "$desktop_file" 2>/dev/null; then
+        continue
+    fi
+    
+    # Get the app name
+    name=$(grep "^Name=" "$desktop_file" | head -1 | cut -d= -f2-)
+    [[ -z "$name" ]] && continue
+    
+    # Get the icon
+    icon=$(grep "^Icon=" "$desktop_file" 2>/dev/null | head -1 | cut -d= -f2-)
+    
+    apps["$name"]="$desktop_file"
+    icons["$name"]="${icon:-application-x-executable}"
+done
+
+# Check if we have any apps
+if [[ ${#apps[@]} -eq 0 ]]; then
+    notify-send "My Apps" "No custom apps found. Create one with Menu → Install!" -i dialog-information
+    exit 0
+fi
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Build menu list and show fuzzel
+# ─────────────────────────────────────────────────────────────────────────────
+# Sort app names alphabetically
+mapfile -t sorted_names < <(printf '%s\n' "${!apps[@]}" | sort -f)
+
+# Create menu entries with icons
+declare -A display_to_name
+
+{
+    for name in "${sorted_names[@]}"; do
+        desktop_file="${apps[$name]}"
+        icon="${icons[$name]}"
+        
+        # Detect app type (Web App or TUI)
+        if grep -q "niri-launch-webapp" "$desktop_file" 2>/dev/null; then
+            type_badge="󰖟"  # Web app icon
+        elif grep -q "niri-launch-tui" "$desktop_file" 2>/dev/null; then
+            type_badge="󰆍"  # TUI icon
+        else
+            type_badge="󰀻"  # Generic app icon
+        fi
+        
+        display="$type_badge  $name"
+        display_to_name["$display"]="$name"
+        
+        # Output in fuzzel dmenu icon format
+        printf '%s\0icon\x1f%s\n' "$display" "$icon"
+    done
+} > /tmp/niri-custom-apps-menu.$$
+
+# Show fuzzel and get selection
+selected=$(fuzzel --dmenu \
+    --width 50 \
+    --lines 12 \
+    --prompt " 󱍕 My Apps  " \
+    "${FUZZEL_OPTS[@]}" \
+    < /tmp/niri-custom-apps-menu.$$ \
+    2>/dev/null)
+
+rm -f /tmp/niri-custom-apps-menu.$$
+
+[[ -z "$selected" ]] && exit 0
+
+# Map back to the original app name
+app_name="${display_to_name[$selected]}"
+[[ -z "$app_name" ]] && app_name="$selected"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Launch the selected app
+# ─────────────────────────────────────────────────────────────────────────────
+desktop_file="${apps[$app_name]}"
+
+if [[ -z "$desktop_file" || ! -f "$desktop_file" ]]; then
+    notify-send "Error" "Could not find desktop file for: $selected" -u critical
+    exit 1
+fi
+
+# Get the Exec command and clean it up
+exec_cmd=$(grep "^Exec=" "$desktop_file" | head -1 | cut -d= -f2-)
+
+# Remove field codes (%f, %F, %u, %U, etc.)
+exec_cmd=$(echo "$exec_cmd" | sed 's/%[fFuUdDnNickvm]//g')
+
+# Check if it needs a terminal
+if grep -q "^Terminal=true" "$desktop_file" 2>/dev/null; then
+    if command -v alacritty &>/dev/null; then
+        exec setsid alacritty -e bash -ic "$exec_cmd" &>/dev/null &
+    else
+        exec setsid xterm -e "$exec_cmd" &>/dev/null &
+    fi
+else
+    exec setsid bash -c "$exec_cmd" &>/dev/null &
+fi

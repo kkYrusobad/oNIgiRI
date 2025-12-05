@@ -1,0 +1,155 @@
+#!/bin/bash
+
+# niri-webapp-install: Create a .desktop file for a web app
+# The app will appear in the Noctalia launcher
+#
+# Usage: 
+#   Interactive: niri-webapp-install
+#   Scripted:    niri-webapp-install "App Name" "https://url" "https://icon-url"
+
+export PATH="$HOME/garbage/editniri/niri-omarchy-port/bin:$PATH"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Gruvbox-styled gum configuration
+# ─────────────────────────────────────────────────────────────────────────────
+export GUM_INPUT_CURSOR_FOREGROUND="#b8bb26"
+export GUM_INPUT_PROMPT_FOREGROUND="#fabd2f"
+export GUM_INPUT_PLACEHOLDER="#928374"
+export GUM_CONFIRM_SELECTED_BACKGROUND="#b8bb26"
+export GUM_CONFIRM_UNSELECTED_BACKGROUND="#3c3836"
+export GUM_STYLE_FOREGROUND="#fbf1c7"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Parse arguments or prompt interactively
+# ─────────────────────────────────────────────────────────────────────────────
+if [[ "$#" -lt 3 ]]; then
+    # Interactive mode
+    echo ""
+    gum style \
+        --foreground "#b8bb26" \
+        --border-foreground "#57514e" \
+        --border double \
+        --padding "0 1" \
+        "󰖟  Create Web App"
+    echo ""
+
+    APP_NAME=$(gum input --prompt "  Name > " --placeholder "My Favorite Web App")
+    [[ -z "$APP_NAME" ]] && { echo "Cancelled."; exit 0; }
+
+    APP_URL=$(gum input --prompt "  URL > " --placeholder "https://example.com")
+    [[ -z "$APP_URL" ]] && { echo "Cancelled."; exit 0; }
+
+    ICON_REF=$(gum input --prompt "  Icon URL > " --placeholder "https://dashboardicons.com/... (PNG)")
+    [[ -z "$ICON_REF" ]] && { echo "Cancelled."; exit 0; }
+
+    INTERACTIVE_MODE=true
+else
+    # Scripted mode
+    APP_NAME="$1"
+    APP_URL="$2"
+    ICON_REF="$3"
+    CUSTOM_EXEC="${4:-}"  # Optional custom exec command
+    MIME_TYPES="${5:-}"   # Optional mime types
+    INTERACTIVE_MODE=false
+fi
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Validate inputs
+# ─────────────────────────────────────────────────────────────────────────────
+if [[ -z "$APP_NAME" || -z "$APP_URL" || -z "$ICON_REF" ]]; then
+    echo "Error: You must provide app name, URL, and icon URL!"
+    exit 1
+fi
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Setup directories
+# ─────────────────────────────────────────────────────────────────────────────
+ICON_DIR="$HOME/.local/share/applications/icons"
+DESKTOP_DIR="$HOME/.local/share/applications"
+mkdir -p "$ICON_DIR"
+
+# Sanitize app name for filename (replace spaces with dashes, lowercase)
+SAFE_NAME=$(echo "$APP_NAME" | tr '[:upper:]' '[:lower:]' | tr ' ' '-' | tr -cd '[:alnum:]-')
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Download or reference icon
+# ─────────────────────────────────────────────────────────────────────────────
+if [[ "$ICON_REF" =~ ^https?:// ]]; then
+    # Download icon from URL
+    ICON_PATH="$ICON_DIR/${SAFE_NAME}.png"
+    
+    if [[ "$INTERACTIVE_MODE" == "true" ]]; then
+        echo ""
+        gum spin --spinner dot --title "Downloading icon..." -- \
+            curl -sL -o "$ICON_PATH" "$ICON_REF"
+    else
+        curl -sL -o "$ICON_PATH" "$ICON_REF"
+    fi
+    
+    if [[ ! -f "$ICON_PATH" || ! -s "$ICON_PATH" ]]; then
+        echo "Error: Failed to download icon from $ICON_REF"
+        exit 1
+    fi
+elif [[ -f "$ICON_REF" ]]; then
+    # Local file reference
+    ICON_PATH="$ICON_REF"
+else
+    # Assume it's an icon name (e.g., "firefox")
+    ICON_PATH="$ICON_REF"
+fi
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Determine exec command
+# ─────────────────────────────────────────────────────────────────────────────
+# Get the directory where this script lives (for full path resolution)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+if [[ -n "$CUSTOM_EXEC" ]]; then
+    EXEC_COMMAND="$CUSTOM_EXEC"
+else
+    EXEC_COMMAND="$SCRIPT_DIR/niri-launch-webapp \"$APP_URL\""
+fi
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Create .desktop file
+# ─────────────────────────────────────────────────────────────────────────────
+DESKTOP_FILE="$DESKTOP_DIR/${SAFE_NAME}.desktop"
+
+cat > "$DESKTOP_FILE" <<EOF
+[Desktop Entry]
+Version=1.0
+Name=$APP_NAME
+Comment=$APP_NAME Web App
+Exec=$EXEC_COMMAND
+Terminal=false
+Type=Application
+Icon=$ICON_PATH
+Categories=Network;WebBrowser;
+StartupNotify=true
+StartupWMClass=$SAFE_NAME
+EOF
+
+# Add mime types if provided
+if [[ -n "$MIME_TYPES" ]]; then
+    echo "MimeType=$MIME_TYPES" >> "$DESKTOP_FILE"
+fi
+
+chmod +x "$DESKTOP_FILE"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Success message
+# ─────────────────────────────────────────────────────────────────────────────
+if [[ "$INTERACTIVE_MODE" == "true" ]]; then
+    echo ""
+    gum style \
+        --foreground "#b8bb26" \
+        --border-foreground "#57514e" \
+        --border rounded \
+        --padding "0 1" \
+        "✓ Created: $APP_NAME"
+    echo ""
+    echo "  You can now find '$APP_NAME' in the Noctalia launcher (Mod+P)"
+    echo ""
+else
+    echo "Created web app: $DESKTOP_FILE"
+fi

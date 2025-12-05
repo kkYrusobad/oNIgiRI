@@ -1,13 +1,25 @@
 #!/bin/bash
 
+# niri-launch-tui: Launch a TUI application in a terminal with a specific app-id
+# Usage: niri-launch-tui [--app-id ID] [--hold] <command> [args...]
+#
+# Options:
+#   --app-id ID   Set the window app-id for Niri window rules
+#   --hold        Keep terminal open after command exits (wait for keypress)
+
 # Parse arguments
 APP_ID=""
+HOLD=false
 POSITIONAL=()
 while [[ $# -gt 0 ]]; do
   case $1 in
     --app-id)
       shift
       APP_ID="$1"
+      shift
+      ;;
+    --hold)
+      HOLD=true
       shift
       ;;
     *)
@@ -18,37 +30,43 @@ while [[ $# -gt 0 ]]; do
 done
 set -- "${POSITIONAL[@]}"
 
-# $1 is the command to run inside the terminal
-# We use uwsm-app to wrap the execution if needed, but here we focus on xdg-terminal-exec
-# We need to set the app-id for the terminal window so niri-launch-or-focus can find it.
+# Need at least a command
+if [[ $# -eq 0 ]]; then
+    echo "Usage: niri-launch-tui [--app-id ID] [--hold] <command> [args...]" >&2
+    exit 1
+fi
+
+# Build the command string
+CMD="$1"
+shift
 
 if [[ -z "$APP_ID" ]]; then
-    APP_NAME=$(basename "$1")
+    APP_NAME=$(basename "$CMD")
     APP_ID="org.niri.$APP_NAME"
 fi
 
-# Check for xdg-terminal-exec or fallback
-if command -v xdg-terminal-exec >/dev/null; then
-    TERM_CMD="xdg-terminal-exec"
-    TERM_ARGS="--app-id=$APP_ID -e"
-elif command -v alacritty >/dev/null; then
-    TERM_CMD="alacritty"
-    TERM_ARGS="--class=$APP_ID -e"
-elif command -v kitty >/dev/null; then
-    TERM_CMD="kitty"
-    TERM_ARGS="--class=$APP_ID -e"
+# If --hold is set, wrap command to wait for keypress
+# Also auto-detect one-shot commands (not interactive TUIs)
+if [[ "$HOLD" == "true" ]]; then
+    # Wrap in bash to show output and wait
+    FULL_CMD="$CMD $*; echo ''; echo 'Press any key to close...'; read -n1 -s"
+else
+    FULL_CMD="$CMD $*"
+fi
+
+# Check for available terminal and launch
+# Use bash -ic (interactive) to enable colors and source user's bashrc
+if command -v alacritty >/dev/null; then
+    exec setsid alacritty --class="$APP_ID" -e bash -ic "$FULL_CMD" &>/dev/null &
 elif command -v foot >/dev/null; then
-    TERM_CMD="foot"
-    TERM_ARGS="-a $APP_ID -e"
+    exec setsid foot -a "$APP_ID" bash -ic "$FULL_CMD" &>/dev/null &
+elif command -v kitty >/dev/null; then
+    exec setsid kitty --class="$APP_ID" bash -ic "$FULL_CMD" &>/dev/null &
 elif command -v ghostty >/dev/null; then
-    TERM_CMD="ghostty"
-    TERM_ARGS="--class=$APP_ID -e"
-elif command -v gnome-terminal >/dev/null; then
-    TERM_CMD="gnome-terminal"
-    TERM_ARGS="--class=$APP_ID --"
+    exec setsid ghostty --class="$APP_ID" -e bash -ic "$FULL_CMD" &>/dev/null &
+elif command -v xdg-terminal-exec >/dev/null; then
+    exec setsid xdg-terminal-exec --app-id="$APP_ID" -e bash -ic "$FULL_CMD" &>/dev/null &
 else
     echo "No suitable terminal found." >&2
     exit 1
 fi
-
-exec setsid uwsm-app -- $TERM_CMD $TERM_ARGS "$1" "${@:2}"
