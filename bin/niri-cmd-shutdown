@@ -1,0 +1,40 @@
+#!/bin/bash
+
+# niri-cmd-shutdown: Styled confirmation dialog for shutdown
+
+# Gruvbox styling
+export GUM_STYLE_FOREGROUND="#fbf1c7"
+export GUM_CONFIRM_PROMPT_FOREGROUND="#fbf1c7"
+export GUM_CONFIRM_SELECTED_FOREGROUND="#282828"  
+export GUM_CONFIRM_SELECTED_BACKGROUND="#fb4934"  # Red for danger
+export GUM_CONFIRM_UNSELECTED_FOREGROUND="#57514e"
+
+clear
+
+# Header
+gum style \
+    --foreground "#fb4934" \
+    --border-foreground "#fb4934" \
+    --border rounded \
+    --align center \
+    --width 40 \
+    --margin "1" \
+    --padding "0 2" \
+    "󰐥  SHUTDOWN SYSTEM"
+
+echo ""
+
+# System info
+gum style --foreground "#83a598" "  Current Session"
+echo ""
+printf "  %-10s %s\n" "Uptime:" "$(uptime -p | sed 's/up //')"
+printf "  %-10s %s\n" "Memory:" "$(free -h | awk '/Mem:/ {print $3 " / " $2}')"
+printf "  %-10s %s\n" "Procs:" "$(ps aux | wc -l) running"
+
+echo ""
+
+# Confirmation
+if gum confirm "Shutdown now?"; then
+    gum spin --spinner dot --title "Shutting down..." -- sleep 1
+    systemctl poweroff
+fi

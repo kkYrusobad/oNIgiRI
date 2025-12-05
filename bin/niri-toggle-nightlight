@@ -1,0 +1,38 @@
+#!/bin/bash
+
+# niri-toggle-nightlight: Toggle warm/cool screen temperature
+# Uses gammastep or wlsunset
+
+ON_TEMP=4000   # Warm (nightlight on)
+OFF_TEMP=6500  # Cool (daylight)
+
+# Check which tool is available
+if command -v gammastep &>/dev/null; then
+    TOOL="gammastep"
+elif command -v wlsunset &>/dev/null; then
+    TOOL="wlsunset"
+else
+    notify-send "󰔎  Nightlight" "Install gammastep or wlsunset"
+    exit 1
+fi
+
+STATE_FILE=~/.local/state/omarchy/toggles/nightlight-on
+
+if pgrep -x "$TOOL" &>/dev/null; then
+    # Currently running, turn off
+    pkill -x "$TOOL"
+    rm -f "$STATE_FILE"
+    notify-send "󰔎  Nightlight OFF" "Daylight temperature"
+else
+    # Not running, turn on
+    mkdir -p "$(dirname "$STATE_FILE")"
+    touch "$STATE_FILE"
+    
+    if [[ "$TOOL" == "gammastep" ]]; then
+        setsid gammastep -O $ON_TEMP &>/dev/null &
+    else
+        setsid wlsunset -T $OFF_TEMP -t $ON_TEMP &>/dev/null &
+    fi
+    
+    notify-send "󰔎  Nightlight ON" "Warm temperature ($ON_TEMP K)"
+fi

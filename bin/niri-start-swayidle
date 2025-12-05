@@ -24,7 +24,7 @@ sleep 0.5
 while true; do
     swayidle -w \
       timeout 120 "$SCRIPT_DIR/niri-launch-screensaver" \
-      resume "pkill -f niri-cmd-screensaver; pkill -f org.omarchy.screensaver" \
+      resume "pkill -f niri-cmd-screensaver; pkill -f org.niri.screensaver" \
       before-sleep "$SCRIPT_DIR/niri-launch-screensaver force"
     
     # If swayidle exits, wait a bit before restarting

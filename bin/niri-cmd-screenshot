@@ -1,0 +1,59 @@
+#!/bin/bash
+
+# niri-cmd-screenshot: Screenshot utility for Niri
+# Uses grim, slurp, and optional satty for editing
+
+[[ -f ~/.config/user-dirs.dirs ]] && source ~/.config/user-dirs.dirs
+OUTPUT_DIR="${XDG_PICTURES_DIR:-$HOME/Pictures}/Screenshots"
+
+# Create directory if needed
+mkdir -p "$OUTPUT_DIR"
+
+# Cancel any existing slurp
+pkill slurp && exit 0
+
+MODE="${1:-region}"
+FILENAME="$OUTPUT_DIR/screenshot-$(date +'%Y-%m-%d_%H-%M-%S').png"
+
+# Slurp options - no tint, just border
+SLURP_OPTS="-b 00000000 -c b8bb26ff -s 00000000 -w 2"
+
+case "$MODE" in
+    region)
+        # Select region with slurp, capture with grim
+        SELECTION=$(slurp $SLURP_OPTS 2>/dev/null)
+        [[ -z "$SELECTION" ]] && exit 0
+        
+        if command -v satty &>/dev/null; then
+            grim -g "$SELECTION" - | satty --filename - \
+                --output-filename "$FILENAME" \
+                --early-exit \
+                --copy-command 'wl-copy'
+            notify-send "󰹑  Screenshot" "Saved to $FILENAME"
+        else
+            grim -g "$SELECTION" "$FILENAME"
+            wl-copy < "$FILENAME"
+            notify-send "󰹑  Screenshot" "Saved and copied to clipboard"
+        fi
+        ;;
+        
+    fullscreen)
+        # Capture full screen
+        grim "$FILENAME"
+        wl-copy < "$FILENAME"
+        notify-send "󰹑  Screenshot" "Full screen saved to $FILENAME"
+        ;;
+        
+    clipboard)
+        # Select region and copy directly to clipboard
+        SELECTION=$(slurp $SLURP_OPTS 2>/dev/null)
+        [[ -z "$SELECTION" ]] && exit 0
+        grim -g "$SELECTION" - | wl-copy
+        notify-send "󰹑  Screenshot" "Copied to clipboard"
+        ;;
+        
+    *)
+        echo "Usage: niri-cmd-screenshot [region|fullscreen|clipboard]"
+        exit 1
+        ;;
+esac

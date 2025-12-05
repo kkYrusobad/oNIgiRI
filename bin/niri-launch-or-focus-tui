@@ -33,7 +33,7 @@ if [[ -n "$APP_NAME_OVERRIDE" ]]; then
 else
     APP_NAME=$(basename "$1")
 fi
-APP_ID="org.omarchy.$APP_NAME"
+APP_ID="org.niri.$APP_NAME"
 LAUNCH_COMMAND="$(dirname "$0")/niri-launch-tui --app-id $APP_ID $@"
 
 exec "$(dirname "$0")/niri-launch-or-focus" $FLOATING $CENTER "$APP_ID" "$LAUNCH_COMMAND"

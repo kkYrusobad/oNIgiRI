@@ -2,14 +2,14 @@
 
 screensaver_in_focus() {
   # Check if the active window is the screensaver
-  niri msg -j windows | jq -e '.[] | select(.is_focused == true) | select(.app_id == "org.omarchy.screensaver")' >/dev/null 2>&1
+  niri msg -j windows | jq -e '.[] | select(.is_focused == true) | select(.app_id == "org.niri.screensaver")' >/dev/null 2>&1
 }
 
 exit_screensaver() {
   # Note: Niri doesn't have cursor:invisible option like Hyprland
   # The cursor will remain visible during screensaver
   pkill -x tte 2>/dev/null
-  pkill -f org.omarchy.screensaver 2>/dev/null
+  pkill -f org.niri.screensaver 2>/dev/null
   exit 0
 }
 

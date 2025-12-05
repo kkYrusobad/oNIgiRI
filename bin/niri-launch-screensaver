@@ -8,9 +8,9 @@ fi
 
 # Exit early if screensaver is already running
 # Use a more specific pattern to avoid matching swayidle's command line
-if pgrep -f "alacritty.*org.omarchy.screensaver" &>/dev/null || \
-   pgrep -f "ghostty.*org.omarchy.screensaver" &>/dev/null || \
-   pgrep -f "kitty.*org.omarchy.screensaver" &>/dev/null; then
+if pgrep -f "alacritty.*org.niri.screensaver" &>/dev/null || \
+   pgrep -f "ghostty.*org.niri.screensaver" &>/dev/null || \
+   pgrep -f "kitty.*org.niri.screensaver" &>/dev/null; then
   exit 0
 fi
 
@@ -30,18 +30,18 @@ TERMINAL="${PREFERRED_TERMINAL:-alacritty}"
 for output in $(niri msg -j outputs | jq -r '.[] | .name'); do
   case $TERMINAL in
   *alacritty*|alacritty)
-    setsid alacritty --class=org.omarchy.screensaver \
+    setsid alacritty --class=org.niri.screensaver \
       --config-file "$PROJECT_DIR/config/alacritty/screensaver.toml" \
       -e "$SCRIPT_DIR/niri-cmd-screensaver" >/dev/null 2>&1 &
     ;;
   *ghostty*|ghostty)
-    setsid ghostty --class=org.omarchy.screensaver \
+    setsid ghostty --class=org.niri.screensaver \
       --config-file="$PROJECT_DIR/config/ghostty/screensaver" \
       --font-size=18 \
       -e "$SCRIPT_DIR/niri-cmd-screensaver" &
     ;;
   *kitty*|kitty)
-    setsid kitty --class=org.omarchy.screensaver \
+    setsid kitty --class=org.niri.screensaver \
       --override font_size=18 \
       --override window_padding_width=0 \
       -e "$SCRIPT_DIR/niri-cmd-screensaver" &

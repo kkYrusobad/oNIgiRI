@@ -303,13 +303,32 @@ binds {
     }
 
     window-rule {
-        match app-id=r#"^org\.omarchy\.About$"#
+        match app-id=r#"^org\.niri\.About$"#
         open-floating true
+        default-column-width { fixed 500; }
     }
 
     window-rule {
-        match app-id=r#"^org\.omarchy\.screensaver$"#
+        match app-id=r#"^org\.niri\.screensaver$"#
         open-fullscreen true
+    }
+
+    window-rule {
+        match app-id=r#"^org\.niri\.Confirm$"#
+        open-floating true
+        default-column-width { fixed 400; }
+    }
+
+    window-rule {
+        match app-id=r#"^org\.niri\.WiFi$"#
+        open-floating true
+        default-column-width { fixed 600; }
+    }
+
+    window-rule {
+        match app-id=r#"^org\.niri\.Bluetooth$"#
+        open-floating true
+        default-column-width { fixed 600; }
     }
 
     window-rule {

@@ -22,7 +22,7 @@ EXIT_CODE=$?
 
 echo "Exit code: $EXIT_CODE" >> "$LOG_FILE"
 echo "Processes after launch:" >> "$LOG_FILE"
-pgrep -fa "org.omarchy.screensaver" >> "$LOG_FILE" 2>&1
+pgrep -fa "org.niri.screensaver" >> "$LOG_FILE" 2>&1
 pgrep -fa "alacritty.*screensaver" >> "$LOG_FILE" 2>&1
 echo "===" >> "$LOG_FILE"
 

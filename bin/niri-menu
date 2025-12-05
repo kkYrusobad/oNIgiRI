@@ -64,17 +64,48 @@ open_in_editor() {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Learn Menu - Nerd Font icons only
+# Learn Menu
 # ─────────────────────────────────────────────────────────────────────────────
 
 show_learn_menu() {
-    case $(menu "Learn" "󰌌  Keybindings\n󰨡  Niri Wiki\n󰣇  Arch Wiki\n  Neovim Docs\n Bash Reference") in
+    case $(menu "Learn" "󰌌  Keybindings\n󰨡  Niri Wiki\n󰣇  Arch Wiki\n  Neovim Docs\n Bash Reference") in
     *Keybindings*) niri-menu-keybindings ;;
     *Niri*) xdg-open "https://github.com/YaLTeR/niri/wiki" ;;
     *Arch*) xdg-open "https://wiki.archlinux.org/title/Main_page" ;;
     *Neovim*) xdg-open "https://www.lazyvim.org/keymaps" ;;
     *Bash*) xdg-open "https://devhints.io/bash" ;;
     *) show_main_menu ;;
+    esac
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Trigger Menu
+# ─────────────────────────────────────────────────────────────────────────────
+
+show_trigger_menu() {
+    case $(menu "Trigger" "󰹑  Screenshot\n󰔎  Toggle\n󰕧  Screenrecord\n󰏘  Color Picker") in
+    *Screenshot*) show_screenshot_menu ;;
+    *Toggle*) show_toggle_menu ;;
+    *Screenrecord*) notify-send "󰕧  Screenrecord" "Coming soon..." ;;
+    *Color*) notify-send "󰏘  Color" "Coming soon..." ;;
+    *) show_main_menu ;;
+    esac
+}
+
+show_toggle_menu() {
+    case $(menu "Toggle" "󱄅  Screensaver\n󰔎  Nightlight") in
+    *Screensaver*) niri-toggle-screensaver ;;
+    *Nightlight*) niri-toggle-nightlight ;;
+    *) back_to show_trigger_menu ;;
+    esac
+}
+
+show_screenshot_menu() {
+    case $(menu "Screenshot" "󰹑  Select Region\n󰍹  Full Screen\n󰆏  To Clipboard Only") in
+    *Region*) niri-cmd-screenshot region ;;
+    *Full*) niri-cmd-screenshot fullscreen ;;
+    *Clipboard*) niri-cmd-screenshot clipboard ;;
+    *) back_to show_trigger_menu ;;
     esac
 }
 
@@ -86,8 +117,8 @@ show_style_menu() {
     case $(menu "Style" "󰏘  Theme\n󰒓  Niri Config\n󱄅  Screensaver\n󰋽  About Text") in
     *Theme*) show_theme_menu ;;
     *Niri*) open_in_editor ~/.config/niri/config.kdl ;;
-    *Screensaver*) open_in_editor ~/.config/omarchy/branding/screensaver.txt ;;
-    *About*) open_in_editor ~/.config/omarchy/branding/about.txt ;;
+    *Screensaver*) open_in_editor /home/kky/garbage/editniri/niri-omarchy-port/branding/screensaver.txt ;;
+    *About*) open_in_editor /home/kky/garbage/editniri/niri-omarchy-port/branding/about.txt ;;
     *) show_main_menu ;;
     esac
 }
@@ -112,9 +143,35 @@ show_system_menu() {
         ;;
     *Screensaver*) niri-launch-screensaver force ;;
     *Suspend*) systemctl suspend ;;
-    *Restart*) systemctl reboot ;;
-    *Shutdown*) systemctl poweroff ;;
+    *Restart*) niri-launch-or-focus-tui --floating --center --name Confirm niri-cmd-reboot ;;
+    *Shutdown*) niri-launch-or-focus-tui --floating --center --name Confirm niri-cmd-shutdown ;;
     *) back_to show_main_menu ;;
+    esac
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Setup Menu - Uses Noctalia IPC where available
+# ─────────────────────────────────────────────────────────────────────────────
+
+show_setup_menu() {
+    case $(menu "Setup" "󰕾  Audio\n󰖩  WiFi\n󰂯  Bluetooth\n󱐋  Power Profile\n󰒓  Settings\n󰔎  Dark Mode") in
+    *Audio*) qs -c noctalia-shell ipc call controlCenter toggle ;;
+    *WiFi*) rfkill unblock wifi; niri-launch-or-focus-tui --floating --center --name WiFi impala ;;
+    *Bluetooth*) rfkill unblock bluetooth; niri-launch-or-focus-tui --floating --center --name Bluetooth bluetui ;;
+    *Power*) show_power_profile_menu ;;
+    *Settings*) qs -c noctalia-shell ipc call settings toggle ;;
+    *Dark*) qs -c noctalia-shell ipc call darkMode toggle ;;
+    *) show_main_menu ;;
+    esac
+}
+
+show_power_profile_menu() {
+    case $(menu "Power" "󱐋  Performance\n󰾅  Balanced\n󰾆  Power Saver\n󰑐  Cycle") in
+    *Performance*) qs -c noctalia-shell ipc call powerProfile set performance ;;
+    *Balanced*) qs -c noctalia-shell ipc call powerProfile set balanced ;;
+    *Saver*) qs -c noctalia-shell ipc call powerProfile set powersaver ;;
+    *Cycle*) qs -c noctalia-shell ipc call powerProfile cycle ;;
+    *) back_to show_setup_menu ;;
     esac
 }
 
@@ -123,13 +180,15 @@ show_system_menu() {
 # ─────────────────────────────────────────────────────────────────────────────
 
 show_main_menu() {
-    go_to_menu "$(menu "Menu" "󰠮  Learn\n󰃣  Style\n󰋽  About\n󰒓  System")"
+    go_to_menu "$(menu "Menu" "󰠮  Learn\n󰹑  Trigger\n󰃣  Style\n󰒓  Setup\n󰋽  About\n  System")"
 }
 
 go_to_menu() {
     case "${1,,}" in
     *learn*) show_learn_menu ;;
+    *trigger*) show_trigger_menu ;;
     *style*) show_style_menu ;;
+    *setup*) show_setup_menu ;;
     *about*) niri-launch-about ;;
     *system*) show_system_menu ;;
     esac

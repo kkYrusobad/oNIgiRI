@@ -24,7 +24,7 @@ set -- "${POSITIONAL[@]}"
 
 if [[ -z "$APP_ID" ]]; then
     APP_NAME=$(basename "$1")
-    APP_ID="org.omarchy.$APP_NAME"
+    APP_ID="org.niri.$APP_NAME"
 fi
 
 # Check for xdg-terminal-exec or fallback

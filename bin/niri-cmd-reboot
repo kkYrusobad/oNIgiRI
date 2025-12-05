@@ -1,0 +1,40 @@
+#!/bin/bash
+
+# niri-cmd-reboot: Styled confirmation dialog for reboot
+
+# Gruvbox styling  
+export GUM_STYLE_FOREGROUND="#fbf1c7"
+export GUM_CONFIRM_PROMPT_FOREGROUND="#fbf1c7"
+export GUM_CONFIRM_SELECTED_FOREGROUND="#282828"
+export GUM_CONFIRM_SELECTED_BACKGROUND="#b8bb26"
+export GUM_CONFIRM_UNSELECTED_FOREGROUND="#57514e"
+
+clear
+
+# Header
+gum style \
+    --foreground "#fabd2f" \
+    --border-foreground "#fabd2f" \
+    --border rounded \
+    --align center \
+    --width 40 \
+    --margin "1" \
+    --padding "0 2" \
+    "󰜉  RESTART SYSTEM"
+
+echo ""
+
+# System info
+gum style --foreground "#83a598" "  Current Session"
+echo ""
+printf "  %-10s %s\n" "Uptime:" "$(uptime -p | sed 's/up //')"
+printf "  %-10s %s\n" "Users:" "$(who | wc -l) logged in"
+printf "  %-10s %s\n" "Load:" "$(cat /proc/loadavg | cut -d' ' -f1-3)"
+
+echo ""
+
+# Confirmation
+if gum confirm "Restart now?"; then
+    gum spin --spinner dot --title "Restarting..." -- sleep 1
+    systemctl reboot
+fi
