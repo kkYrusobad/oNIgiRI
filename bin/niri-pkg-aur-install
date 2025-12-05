@@ -1,0 +1,63 @@
+#!/bin/bash
+
+# niri-pkg-aur-install: Browse and install AUR packages using fzf + yay
+# Shows AUR package list with preview, supports multi-select and PKGBUILD viewing
+
+# Gruvbox colors
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+BLUE='\033[0;34m'
+RED='\033[0;31m'
+GRAY='\033[0;90m'
+NC='\033[0m' # No Color
+
+# Check for yay
+if ! command -v yay &>/dev/null; then
+    echo -e "${RED}Error: yay is not installed.${NC}"
+    echo -e "${GRAY}Install it first with:${NC}"
+    echo "  git clone https://aur.archlinux.org/yay.git && cd yay && makepkg -si"
+    echo ""
+    echo -e "${GRAY}Press any key to close...${NC}"
+    read -n1 -s
+    exit 1
+fi
+
+# Gruvbox colors for fzf
+export FZF_DEFAULT_OPTS="
+  --color=bg+:#3c3836,bg:#282828,spinner:#b8bb26,hl:#fabd2f
+  --color=fg:#ebdbb2,header:#83a598,info:#b8bb26,pointer:#b8bb26
+  --color=marker:#b8bb26,fg+:#ebdbb2,prompt:#b8bb26,hl+:#fabd2f
+"
+
+fzf_args=(
+  --multi
+  --preview 'yay -Siia {1} 2>/dev/null || echo "No info available"'
+  --preview-label=' Alt-P: toggle | Alt-B: PKGBUILD | Alt-J/K: scroll | Tab: multi-select '
+  --preview-label-pos='bottom'
+  --preview-window 'right:60%:wrap'
+  --bind 'alt-p:toggle-preview'
+  --bind 'alt-d:preview-half-page-down,alt-u:preview-half-page-up'
+  --bind 'alt-k:preview-up,alt-j:preview-down'
+  --bind 'alt-b:change-preview:yay -Gpa {1} 2>/dev/null | tail -n +5 || echo "PKGBUILD not available"'
+  --bind 'alt-B:change-preview:yay -Siia {1} 2>/dev/null || echo "No info available"'
+  --header '  Select AUR packages to install (Alt-B for PKGBUILD)'
+  --prompt ' 󰏔 AUR Install  '
+)
+
+echo -e "${BLUE}Loading AUR package list (this may take a moment)...${NC}"
+pkg_names=$(yay -Slqa 2>/dev/null | fzf "${fzf_args[@]}")
+
+if [[ -n "$pkg_names" ]]; then
+  echo ""
+  echo -e "${GREEN}󰏔 Installing selected AUR packages...${NC}"
+  echo ""
+  # Convert newline-separated selections to space-separated
+  echo "$pkg_names" | tr '\n' ' ' | xargs yay -S --noconfirm
+  
+  # Update locate database
+  sudo updatedb 2>/dev/null
+  
+  niri-show-done
+else
+  echo -e "${GRAY}No packages selected.${NC}"
+fi

@@ -1,0 +1,46 @@
+#!/bin/bash
+
+# niri-pkg-install: Browse and install packages using fzf + pacman
+# Shows package list with preview, supports multi-select
+
+# Gruvbox colors
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+BLUE='\033[0;34m'
+GRAY='\033[0;90m'
+NC='\033[0m' # No Color
+
+# Gruvbox colors for fzf
+export FZF_DEFAULT_OPTS="
+  --color=bg+:#3c3836,bg:#282828,spinner:#b8bb26,hl:#fabd2f
+  --color=fg:#ebdbb2,header:#83a598,info:#b8bb26,pointer:#b8bb26
+  --color=marker:#b8bb26,fg+:#ebdbb2,prompt:#b8bb26,hl+:#fabd2f
+"
+
+fzf_args=(
+  --multi
+  --preview 'pacman -Sii {1} 2>/dev/null || echo "No info available"'
+  --preview-label=' Alt-P: toggle preview | Alt-J/K: scroll | Tab: multi-select '
+  --preview-label-pos='bottom'
+  --preview-window 'right:60%:wrap'
+  --bind 'alt-p:toggle-preview'
+  --bind 'alt-d:preview-half-page-down,alt-u:preview-half-page-up'
+  --bind 'alt-k:preview-up,alt-j:preview-down'
+  --header '  Select packages to install (Tab to multi-select, Enter to confirm)'
+  --prompt ' 󰏔 Install  '
+)
+
+echo -e "${BLUE}Loading package list...${NC}"
+pkg_names=$(pacman -Slq 2>/dev/null | fzf "${fzf_args[@]}")
+
+if [[ -n "$pkg_names" ]]; then
+  echo ""
+  echo -e "${GREEN}󰏔 Installing selected packages...${NC}"
+  echo ""
+  # Convert newline-separated selections to space-separated
+  echo "$pkg_names" | tr '\n' ' ' | xargs sudo pacman -S --noconfirm
+  
+  niri-show-done
+else
+  echo -e "${GRAY}No packages selected.${NC}"
+fi

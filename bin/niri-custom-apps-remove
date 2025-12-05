@@ -1,0 +1,119 @@
+#!/bin/bash
+
+# niri-custom-apps-remove: Remove custom web/TUI apps created by niri-webapp-install or niri-tui-install
+# Uses gum for selection with Gruvbox styling
+
+ICON_DIR="$HOME/.local/share/applications/icons"
+DESKTOP_DIR="$HOME/.local/share/applications"
+
+# Gruvbox colors
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+BLUE='\033[0;34m'
+RED='\033[0;31m'
+GRAY='\033[0;90m'
+NC='\033[0m' # No Color
+
+# Gruvbox-styled gum configuration
+export GUM_CHOOSE_CURSOR_FOREGROUND="#fb4934"
+export GUM_CHOOSE_SELECTED_FOREGROUND="#fb4934"
+export GUM_CHOOSE_HEADER_FOREGROUND="#fabd2f"
+export GUM_STYLE_FOREGROUND="#fbf1c7"
+
+# Find all custom apps (web apps and TUI apps created by our scripts)
+CUSTOM_APPS=()
+
+for desktop_file in "$DESKTOP_DIR"/*.desktop; do
+    [[ -f "$desktop_file" ]] || continue
+    
+    # Check if it's one of our apps (contains niri-launch-webapp or niri-launch-tui)
+    if grep -qE "(niri-launch-webapp|niri-launch-tui)" "$desktop_file" 2>/dev/null; then
+        # Get the app name from the Name= line
+        name=$(grep "^Name=" "$desktop_file" | head -1 | cut -d= -f2-)
+        [[ -n "$name" ]] && CUSTOM_APPS+=("$name")
+    fi
+done
+
+if [[ ${#CUSTOM_APPS[@]} -eq 0 ]]; then
+    echo ""
+    echo -e "${GRAY}No custom apps found to remove.${NC}"
+    echo -e "${BLUE}Create apps with Menu → Install → Web App or TUI App${NC}"
+    echo ""
+    echo -e "${GRAY}Press any key to close...${NC}"
+    read -n1 -s
+    exit 0
+fi
+
+# Sort the apps
+IFS=$'\n' SORTED_APPS=($(sort <<<"${CUSTOM_APPS[*]}"))
+unset IFS
+
+echo ""
+gum style \
+    --foreground "#fb4934" \
+    --border-foreground "#57514e" \
+    --border double \
+    --padding "0 1" \
+    "  Remove Custom Apps"
+echo ""
+
+# Let user select apps to remove (multi-select)
+SELECTED=$(gum choose --no-limit \
+    --header "Select apps to remove (Space to select, Enter to confirm):" \
+    --cursor-prefix="  " \
+    --selected-prefix="✗ " \
+    --unselected-prefix="  " \
+    "${SORTED_APPS[@]}")
+
+if [[ -z "$SELECTED" ]]; then
+    echo -e "${GRAY}No apps selected. Cancelled.${NC}"
+    exit 0
+fi
+
+# Convert to array
+APPS_TO_REMOVE=()
+while IFS= read -r line; do
+    [[ -n "$line" ]] && APPS_TO_REMOVE+=("$line")
+done <<< "$SELECTED"
+
+echo ""
+echo -e "${RED}⚠️  The following apps will be REMOVED:${NC}"
+for app in "${APPS_TO_REMOVE[@]}"; do
+    echo -e "  ${YELLOW}- $app${NC}"
+done
+echo ""
+
+# Confirm
+if ! gum confirm --affirmative="Yes, remove" --negative="Cancel" "Remove these apps?"; then
+    echo -e "${GRAY}Cancelled.${NC}"
+    exit 0
+fi
+
+echo ""
+
+# Remove each selected app
+for app_name in "${APPS_TO_REMOVE[@]}"; do
+    # Find the desktop file for this app
+    for desktop_file in "$DESKTOP_DIR"/*.desktop; do
+        [[ -f "$desktop_file" ]] || continue
+        
+        file_name=$(grep "^Name=" "$desktop_file" | head -1 | cut -d= -f2-)
+        if [[ "$file_name" == "$app_name" ]]; then
+            # Get the safe name (basename without .desktop)
+            safe_name=$(basename "$desktop_file" .desktop)
+            
+            # Remove desktop file
+            rm -f "$desktop_file"
+            
+            # Remove icon (try both png and svg)
+            rm -f "$ICON_DIR/$safe_name.png"
+            rm -f "$ICON_DIR/$safe_name.svg"
+            
+            echo -e "${GREEN}✓ Removed: $app_name${NC}"
+            break
+        fi
+    done
+done
+
+echo ""
+niri-show-done

@@ -1,0 +1,7 @@
+#!/bin/bash
+
+# niri-show-done: Show animated spinning globe with "Done!" message
+# Uses gum spin with globe spinner, waits for keypress to close
+
+echo
+gum spin --spinner "globe" --title "Done! Press any key to close..." -- bash -c 'read -n 1 -s'

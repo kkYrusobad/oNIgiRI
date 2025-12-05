@@ -357,6 +357,31 @@ binds {
         default-column-width { fixed 600; }
     }
 
+    // Package manager windows (floating, small size)
+    window-rule {
+        match app-id=r#"^org\.niri\.PkgInstall$"#
+        open-floating true
+        default-column-width { fixed 900; }
+    }
+
+    window-rule {
+        match app-id=r#"^org\.niri\.AURInstall$"#
+        open-floating true
+        default-column-width { fixed 900; }
+    }
+
+    window-rule {
+        match app-id=r#"^org\.niri\.PkgRemove$"#
+        open-floating true
+        default-column-width { fixed 900; }
+    }
+
+    window-rule {
+        match app-id=r#"^org\.niri\.AppRemove$"#
+        open-floating true
+        default-column-width { fixed 600; }
+    }
+
     window-rule {
         geometry-corner-radius 10 // Set every window radius to 20
         clip-to-geometry true

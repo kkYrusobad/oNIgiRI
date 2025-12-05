@@ -180,9 +180,23 @@ show_power_profile_menu() {
 # ─────────────────────────────────────────────────────────────────────────────
 
 show_install_menu() {
-    case $(menu "Install" "󰖟  Web App\n󰆍  TUI App") in
+    case $(menu "Install" "󰏗  Package\n󰣇  AUR Package\n󰖟  Web App\n󰆍  TUI App") in
     *Web*) niri-launch-or-focus-tui --floating --center --name WebAppInstall niri-webapp-install ;;
-    *TUI*) niri-launch-or-focus-tui --floating --center --name TUIInstall niri-tui-install ;;
+    *TUI*App*) niri-launch-or-focus-tui --floating --center --name TUIInstall niri-tui-install ;;
+    *Package*) niri-launch-or-focus-tui --floating --center --name PkgInstall niri-pkg-install ;;
+    *AUR*) niri-launch-or-focus-tui --floating --center --name AURInstall niri-pkg-aur-install ;;
+    *) show_main_menu ;;
+    esac
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Remove Menu
+# ─────────────────────────────────────────────────────────────────────────────
+
+show_remove_menu() {
+    case $(menu "Remove" "󱧖  Package\n󱍕  My App") in
+    *My*App*) niri-launch-or-focus-tui --floating --center --name AppRemove niri-custom-apps-remove ;;
+    *Package*) niri-launch-or-focus-tui --floating --center --name PkgRemove niri-pkg-remove ;;
     *) show_main_menu ;;
     esac
 }
@@ -193,7 +207,7 @@ show_install_menu() {
 
 show_main_menu() {
     #go_to_menu "$(menu "Menu" "󰀻  Apps\n󱍕  My Apps\n󰠮  Learn\n󰹑  Trigger\n󰃣  Style\n󰒓  Setup\n󰉉  Install\n󰋽  About\n  System")"
-    go_to_menu "$(menu "󰻀" "󱍕  My Apps\n󰠮  Learn\n󰹑  Trigger\n󰃣  Style\n󰒓  Setup\n󰉉  Install\n󰋽  About\n  System")"
+    go_to_menu "$(menu "󰻀" "󱍕  My Apps\n󰠮  Learn\n󰹑  Trigger\n󰃣  Style\n󰒓  Setup\n󰏔  Install\n󱧖  Remove\n󰋽  About\n󱩊  System")"
 }
 
 go_to_menu() {
@@ -205,6 +219,7 @@ go_to_menu() {
     *style*) show_style_menu ;;
     *setup*) show_setup_menu ;;
     *install*) show_install_menu ;;
+    *remove*) show_remove_menu ;;
     *about*) niri-launch-about ;;
     *system*) show_system_menu ;;
     esac

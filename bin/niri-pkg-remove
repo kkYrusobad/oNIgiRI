@@ -1,0 +1,69 @@
+#!/bin/bash
+
+# niri-pkg-remove: Browse and remove installed packages using fzf
+# Shows installed packages with preview, supports multi-select
+
+# Gruvbox colors
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+BLUE='\033[0;34m'
+RED='\033[0;31m'
+GRAY='\033[0;90m'
+NC='\033[0m' # No Color
+
+# Check for yay (for listing) or fall back to pacman
+if command -v yay &>/dev/null; then
+    LIST_CMD="yay -Qqe"
+    INFO_CMD="yay -Qi"
+else
+    LIST_CMD="pacman -Qqe"
+    INFO_CMD="pacman -Qi"
+fi
+
+# Gruvbox colors for fzf (red accent for remove)
+export FZF_DEFAULT_OPTS="
+  --color=bg+:#3c3836,bg:#282828,spinner:#fb4934,hl:#fabd2f
+  --color=fg:#ebdbb2,header:#83a598,info:#fb4934,pointer:#fb4934
+  --color=marker:#fb4934,fg+:#ebdbb2,prompt:#fb4934,hl+:#fabd2f
+"
+
+fzf_args=(
+  --multi
+  --preview "$INFO_CMD {1} 2>/dev/null || echo 'No info available'"
+  --preview-label=' Alt-P: toggle preview | Alt-J/K: scroll | Tab: multi-select '
+  --preview-label-pos='bottom'
+  --preview-window 'right:60%:wrap'
+  --bind 'alt-p:toggle-preview'
+  --bind 'alt-d:preview-half-page-down,alt-u:preview-half-page-up'
+  --bind 'alt-k:preview-up,alt-j:preview-down'
+  --header '  Select packages to REMOVE (Tab to multi-select)'
+  --prompt '  󰏔 Remove  '
+)
+
+echo -e "${BLUE}Loading installed packages...${NC}"
+pkg_names=$($LIST_CMD 2>/dev/null | fzf "${fzf_args[@]}")
+
+if [[ -n "$pkg_names" ]]; then
+  echo ""
+  echo -e "${RED}⚠️  The following packages will be REMOVED:${NC}"
+  echo -e "${YELLOW}$(echo "$pkg_names" | sed 's/^/  - /')${NC}"
+  echo ""
+  
+  # Confirm removal
+  echo -ne "${GRAY}Are you sure? [y/N] ${NC}"
+  read -n 1 -r
+  echo ""
+  
+  if [[ $REPLY =~ ^[Yy]$ ]]; then
+    echo -e "${RED}Removing selected packages...${NC}"
+    echo ""
+    echo "$pkg_names" | tr '\n' ' ' | xargs sudo pacman -Rns --noconfirm
+    
+    niri-show-done
+  else
+    echo -e "${GRAY}Cancelled.${NC}"
+    read -n1 -s
+  fi
+else
+  echo -e "${GRAY}No packages selected.${NC}"
+fi
