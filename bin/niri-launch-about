@@ -1,0 +1,4 @@
+#!/bin/bash
+
+# Launch fastfetch and wait for a keypress
+exec "$(dirname "$0")/niri-launch-or-focus-tui" --floating --center --name About "bash -c '/home/kky/garbage/rxfetch-rs/target/release/rxfetch-rs; read -n 1 -s'"

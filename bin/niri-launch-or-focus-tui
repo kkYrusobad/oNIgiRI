@@ -1,0 +1,39 @@
+#!/bin/bash
+
+FLOATING=""
+CENTER=""
+POSITIONAL=()
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --floating)
+      FLOATING="--floating"
+      shift
+      ;;
+    --center)
+      CENTER="--center"
+      shift
+      ;;
+    --name)
+      shift
+      APP_NAME_OVERRIDE="$1"
+      shift
+      ;;
+    *)
+      POSITIONAL+=("$1")
+      shift
+      ;;
+  esac
+done
+
+set -- "${POSITIONAL[@]}"
+
+# $1 is the command/name, subsequent args are passed to the launch command
+if [[ -n "$APP_NAME_OVERRIDE" ]]; then
+    APP_NAME="$APP_NAME_OVERRIDE"
+else
+    APP_NAME=$(basename "$1")
+fi
+APP_ID="org.omarchy.$APP_NAME"
+LAUNCH_COMMAND="$(dirname "$0")/niri-launch-tui --app-id $APP_ID $@"
+
+exec "$(dirname "$0")/niri-launch-or-focus" $FLOATING $CENTER "$APP_ID" "$LAUNCH_COMMAND"

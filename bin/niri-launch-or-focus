@@ -1,0 +1,71 @@
+#!/bin/bash
+
+FLOATING=false
+CENTER=false
+POSITIONAL=()
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --floating)
+      FLOATING=true
+      shift
+      ;;
+    --center)
+      CENTER=true
+      shift
+      ;;
+    *)
+      POSITIONAL+=("$1")
+      shift
+      ;;
+  esac
+done
+
+set -- "${POSITIONAL[@]}"
+if (($# == 0)); then
+  echo "Usage: niri-launch-or-focus [--floating] [--center] [app-id-pattern] [launch-command]"
+  exit 1
+fi
+
+APP_ID_PATTERN="$1"
+LAUNCH_COMMAND="${2:-"uwsm-app -- $APP_ID_PATTERN"}"
+
+# Find window ID matching the app_id pattern
+get_window_id() {
+    niri msg -j windows | jq -r --arg p "$APP_ID_PATTERN" '.[] | select(.app_id | test($p; "i")) | .id' | head -n1
+}
+
+WINDOW_ID=$(get_window_id)
+
+if [[ -n $WINDOW_ID ]]; then
+  niri msg action focus-window --id "$WINDOW_ID"
+else
+  # Launch in background so we can apply rules
+  eval setsid $LAUNCH_COMMAND &
+  
+  if [ "$FLOATING" = true ] || [ "$CENTER" = true ]; then
+      # Wait for window to appear (max 2 seconds)
+      for i in {1..20}; do
+          sleep 0.1
+          WINDOW_ID=$(get_window_id)
+          if [[ -n $WINDOW_ID ]]; then
+              break
+          fi
+      done
+      
+      if [[ -n $WINDOW_ID ]]; then
+          # Ensure it's focused
+          niri msg action focus-window --id "$WINDOW_ID"
+          
+          if [ "$FLOATING" = true ]; then
+               # Check if already floating
+               IS_FLOATING=$(niri msg -j windows | jq -r --arg id "$WINDOW_ID" '.[] | select(.id == ($id|tonumber)) | .is_floating')
+               if [ "$IS_FLOATING" != "true" ]; then
+                   niri msg action toggle-window-floating
+               fi
+          fi
+          if [ "$CENTER" = true ]; then
+               niri msg action center-window
+          fi
+      fi
+  fi
+fi

@@ -1,0 +1,57 @@
+#!/bin/bash
+
+# Exit early if we don't have the tte command
+if ! command -v tte &>/dev/null; then
+  notify-send "⚠️  Screensaver Error" "tte (terminaltexteffects) is not installed"
+  exit 1
+fi
+
+# Exit early if screensaver is already running
+# Use a more specific pattern to avoid matching swayidle's command line
+if pgrep -f "alacritty.*org.omarchy.screensaver" &>/dev/null || \
+   pgrep -f "ghostty.*org.omarchy.screensaver" &>/dev/null || \
+   pgrep -f "kitty.*org.omarchy.screensaver" &>/dev/null; then
+  exit 0
+fi
+
+# Allow screensaver to be turned off but also force started
+if [[ -f ~/.local/state/omarchy/toggles/screensaver-off ]] && [[ $1 != "force" ]]; then
+  exit 1
+fi
+
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+
+# Use Alacritty as the default terminal (user preference)
+TERMINAL="${PREFERRED_TERMINAL:-alacritty}"
+
+# Launch screensaver on all outputs
+for output in $(niri msg -j outputs | jq -r '.[] | .name'); do
+  case $TERMINAL in
+  *alacritty*|alacritty)
+    setsid alacritty --class=org.omarchy.screensaver \
+      --config-file "$PROJECT_DIR/config/alacritty/screensaver.toml" \
+      -e "$SCRIPT_DIR/niri-cmd-screensaver" >/dev/null 2>&1 &
+    ;;
+  *ghostty*|ghostty)
+    setsid ghostty --class=org.omarchy.screensaver \
+      --config-file="$PROJECT_DIR/config/ghostty/screensaver" \
+      --font-size=18 \
+      -e "$SCRIPT_DIR/niri-cmd-screensaver" &
+    ;;
+  *kitty*|kitty)
+    setsid kitty --class=org.omarchy.screensaver \
+      --override font_size=18 \
+      --override window_padding_width=0 \
+      -e "$SCRIPT_DIR/niri-cmd-screensaver" &
+    ;;
+  *)
+    notify-send "⚠️  Screensaver Error" "Unsupported terminal: $TERMINAL. Use alacritty, ghostty, or kitty."
+    exit 1
+    ;;
+  esac
+done
+
+# Note: Fullscreen is handled by the window rule in config.kdl
+# The screensaver windows will automatically open in fullscreen mode

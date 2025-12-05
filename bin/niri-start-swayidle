@@ -1,0 +1,32 @@
+#!/bin/bash
+
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Kill other instances of this script to prevent conflicts
+# We exclude our own PID ($$)
+for pid in $(pgrep -f "niri-start-swayidle"); do
+    if [ "$pid" != "$$" ]; then
+        kill "$pid" 2>/dev/null
+    fi
+done
+
+# Kill existing swayidle instances
+pkill swayidle
+# Wait a moment for cleanup
+sleep 0.5
+
+# Start swayidle loop
+# Timeout 300s (5m) -> Launch screensaver
+# Resume -> Kill screensaver (script and window)
+# Before sleep -> Force launch screensaver
+
+while true; do
+    swayidle -w \
+      timeout 120 "$SCRIPT_DIR/niri-launch-screensaver" \
+      resume "pkill -f niri-cmd-screensaver; pkill -f org.omarchy.screensaver" \
+      before-sleep "$SCRIPT_DIR/niri-launch-screensaver force"
+    
+    # If swayidle exits, wait a bit before restarting
+    sleep 1
+done

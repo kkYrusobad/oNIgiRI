@@ -1,0 +1,54 @@
+#!/bin/bash
+
+# Parse arguments
+APP_ID=""
+POSITIONAL=()
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --app-id)
+      shift
+      APP_ID="$1"
+      shift
+      ;;
+    *)
+      POSITIONAL+=("$1")
+      shift
+      ;;
+  esac
+done
+set -- "${POSITIONAL[@]}"
+
+# $1 is the command to run inside the terminal
+# We use uwsm-app to wrap the execution if needed, but here we focus on xdg-terminal-exec
+# We need to set the app-id for the terminal window so niri-launch-or-focus can find it.
+
+if [[ -z "$APP_ID" ]]; then
+    APP_NAME=$(basename "$1")
+    APP_ID="org.omarchy.$APP_NAME"
+fi
+
+# Check for xdg-terminal-exec or fallback
+if command -v xdg-terminal-exec >/dev/null; then
+    TERM_CMD="xdg-terminal-exec"
+    TERM_ARGS="--app-id=$APP_ID -e"
+elif command -v alacritty >/dev/null; then
+    TERM_CMD="alacritty"
+    TERM_ARGS="--class=$APP_ID -e"
+elif command -v kitty >/dev/null; then
+    TERM_CMD="kitty"
+    TERM_ARGS="--class=$APP_ID -e"
+elif command -v foot >/dev/null; then
+    TERM_CMD="foot"
+    TERM_ARGS="-a $APP_ID -e"
+elif command -v ghostty >/dev/null; then
+    TERM_CMD="ghostty"
+    TERM_ARGS="--class=$APP_ID -e"
+elif command -v gnome-terminal >/dev/null; then
+    TERM_CMD="gnome-terminal"
+    TERM_ARGS="--class=$APP_ID --"
+else
+    echo "No suitable terminal found." >&2
+    exit 1
+fi
+
+exec setsid uwsm-app -- $TERM_CMD $TERM_ARGS "$1" "${@:2}"

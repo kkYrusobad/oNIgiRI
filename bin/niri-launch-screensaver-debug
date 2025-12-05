@@ -1,0 +1,29 @@
+#!/bin/bash
+
+# Debug wrapper for screensaver launch
+# This logs all output to help diagnose swayidle issues
+
+LOG_FILE="/tmp/screensaver-launch.log"
+
+echo "=== Screensaver Launch Debug $(date) ===" >> "$LOG_FILE"
+echo "Called with args: $*" >> "$LOG_FILE"
+echo "Environment:" >> "$LOG_FILE"
+echo "  WAYLAND_DISPLAY=$WAYLAND_DISPLAY" >> "$LOG_FILE"
+echo "  DISPLAY=$DISPLAY" >> "$LOG_FILE"
+echo "  PATH=$PATH" >> "$LOG_FILE"
+echo "  HOME=$HOME" >> "$LOG_FILE"
+
+# Get the real script directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Run the actual screensaver launcher and capture output
+"$SCRIPT_DIR/niri-launch-screensaver" "$@" >> "$LOG_FILE" 2>&1
+EXIT_CODE=$?
+
+echo "Exit code: $EXIT_CODE" >> "$LOG_FILE"
+echo "Processes after launch:" >> "$LOG_FILE"
+pgrep -fa "org.omarchy.screensaver" >> "$LOG_FILE" 2>&1
+pgrep -fa "alacritty.*screensaver" >> "$LOG_FILE" 2>&1
+echo "===" >> "$LOG_FILE"
+
+exit $EXIT_CODE
