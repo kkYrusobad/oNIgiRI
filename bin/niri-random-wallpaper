@@ -1,0 +1,15 @@
+#!/bin/bash
+# Random wallpaper setter for Niruv
+
+WALLPAPER_DIR="/home/kky/Pictures/Wallpapers"
+
+# Kill existing swaybg
+pkill -x swaybg 2>/dev/null
+
+# Find a random wallpaper
+WALL=$(find "$WALLPAPER_DIR" -type f \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' -o -iname '*.webp' \) | shuf -n 1)
+
+# Set wallpaper if found - use nohup and redirect to /dev/null to fully detach
+if [ -n "$WALL" ]; then
+    nohup swaybg -i "$WALL" -m fill >/dev/null 2>&1 &
+fi
