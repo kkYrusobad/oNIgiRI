@@ -31,21 +31,22 @@ export FZF_DEFAULT_OPTS="
 
 fzf_args=(
   --multi
-  --preview 'yay -Siia {1} 2>/dev/null || echo "No info available"'
+  --preview 'yay -Si {1} 2>/dev/null || echo "No info available"'
   --preview-label=' Alt-P: toggle | Alt-B: PKGBUILD | Alt-J/K: scroll | Tab: multi-select '
   --preview-label-pos='bottom'
   --preview-window 'right:60%:wrap'
   --bind 'alt-p:toggle-preview'
   --bind 'alt-d:preview-half-page-down,alt-u:preview-half-page-up'
   --bind 'alt-k:preview-up,alt-j:preview-down'
-  --bind 'alt-b:change-preview:yay -Gpa {1} 2>/dev/null | tail -n +5 || echo "PKGBUILD not available"'
-  --bind 'alt-B:change-preview:yay -Siia {1} 2>/dev/null || echo "No info available"'
+  --bind 'alt-b:change-preview:yay -Gp {1} 2>/dev/null | tail -n +5 || echo "PKGBUILD not available"'
+  --bind 'alt-B:change-preview:yay -Si {1} 2>/dev/null || echo "No info available"'
   --header '  Select AUR packages to install (Alt-B for PKGBUILD)'
   --prompt ' 󰏔 AUR Install  '
 )
 
-echo -e "${BLUE}Loading AUR package list (this may take a moment)...${NC}"
-pkg_names=$(yay -Slqa 2>/dev/null | fzf "${fzf_args[@]}")
+echo -e "${BLUE}Loading AUR package list...${NC}"
+# Fetch package list directly from AUR (bypasses corrupted local cache)
+pkg_names=$(curl -s "https://aur.archlinux.org/packages.gz" | gunzip 2>/dev/null | fzf "${fzf_args[@]}")
 
 if [[ -n "$pkg_names" ]]; then
   echo ""
