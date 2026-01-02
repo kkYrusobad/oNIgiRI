@@ -1,0 +1,116 @@
+#!/bin/bash
+
+# niri-menu-flat: Flat searchable menu with category headings
+# All items searchable - type "screenshot" to find it directly!
+# Categories shown as prefixes for organization
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export PATH="$SCRIPT_DIR:$PATH"
+
+# Fuzzel styling
+FUZZEL_OPTS=(
+    "--font=JetBrainsMono Nerd Font:size=12"
+    "--background=282828e6"
+    "--text-color=fbf1c7ff"
+    "--selection-color=3c3836e6"
+    "--selection-text-color=b8bb26ff"
+    "--border-color=57514eff"
+    "--match-color=fabd2fff"
+    "--horizontal-pad=16"
+    "--vertical-pad=12"
+    "--inner-pad=8"
+    "--width=50"
+    "--lines=15"
+)
+
+# Menu with category prefixes - searchable by category OR item name
+MENU_ITEMS="󰠮 Learn        󰌌  Keybindings
+󰠮 Learn        󰨡  Niri Wiki
+󰠮 Learn        󰣇  Arch Wiki
+󰠮 Learn          Neovim Docs
+󰠮 Learn          Bash Reference
+󰹑 Trigger      󰹑  Screenshot Region
+󰹑 Trigger      󰍹  Screenshot Full
+󰹑 Trigger      󰆏  Screenshot Clipboard
+󰹑 Trigger      󰕧  Screen Record
+󰹑 Trigger      󱄅  Toggle Screensaver
+󰹑 Trigger      󰔎  Toggle Nightlight
+󰃣 Style        󰏘  Theme Selection
+󰃣 Style        󰒓  Edit Niri Config
+󰒓 Setup        󰕾  Audio Settings
+󰒓 Setup        󰖩  WiFi
+󰒓 Setup        󰂯  Bluetooth
+󰒓 Setup        󱐋  Power Performance
+󰒓 Setup        󰾅  Power Balanced
+󰒓 Setup        󰾆  Power Saver
+󰏔 Install      󰏗  Package
+󰏔 Install      󰣇  AUR Package
+󰏔 Install      󰖟  Web App
+󰏔 Install      󰆍  TUI App
+󱧖 Remove       󱧖  Package
+󱧖 Remove       󱍕  My App
+󱍕 My Apps      󱍕  Browse My Apps
+󱩊 System       󰌾  Lock Screen
+󱩊 System       󱄅  Screensaver
+󱩊 System       󰒲  Suspend
+󱩊 System       󰜉  Restart
+󱩊 System       󰐥  Shutdown
+󰋽 About        󰋽  About Niruv"
+
+selected=$(echo -e "$MENU_ITEMS" | fuzzel --dmenu \
+    --prompt " 󰻀 Menu  " \
+    "${FUZZEL_OPTS[@]}" \
+    2>/dev/null)
+
+[[ -z "$selected" ]] && exit 0
+
+# Handle actions based on the item part (after category prefix)
+case "$selected" in
+    # Learn
+    *Keybindings*) niri-menu-keybindings ;;
+    *"Niri Wiki"*) xdg-open "https://github.com/YaLTeR/niri/wiki" ;;
+    *"Arch Wiki"*) xdg-open "https://wiki.archlinux.org" ;;
+    *"Neovim"*) xdg-open "https://www.lazyvim.org/keymaps" ;;
+    *"Bash"*) xdg-open "https://devhints.io/bash" ;;
+    
+    # Trigger
+    *"Screenshot Region"*) niri-cmd-screenshot region ;;
+    *"Screenshot Full"*) niri-cmd-screenshot fullscreen ;;
+    *"Screenshot Clipboard"*) niri-cmd-screenshot clipboard ;;
+    *"Screen Record"*) niri-record 2>/dev/null || notify-send "Screen Record" "Coming soon" ;;
+    *"Toggle Screensaver"*) niri-toggle-screensaver ;;
+    *"Toggle Nightlight"*) niri-toggle-nightlight ;;
+    
+    # Style
+    *"Theme"*) notify-send "󰏘 Theme" "Theme selection coming soon..." ;;
+    *"Edit Niri"*) ${EDITOR:-nvim} ~/.config/niri/config.kdl ;;
+    
+    # Setup
+    *"Audio"*) pavucontrol ;;
+    *WiFi*) rfkill unblock wifi; niri-launch-or-focus-tui --floating --center --name WiFi impala ;;
+    *Bluetooth*) rfkill unblock bluetooth; niri-launch-or-focus-tui --floating --center --name Bluetooth bluetui ;;
+    *"Power Performance"*) powerprofilesctl set performance && notify-send "󱐋 Power" "Performance mode" ;;
+    *"Power Balanced"*) powerprofilesctl set balanced && notify-send "󰾅 Power" "Balanced mode" ;;
+    *"Power Saver"*) powerprofilesctl set power-saver && notify-send "󰾆 Power" "Power saver mode" ;;
+    
+    # Install
+    *Install*Package* | *"󰏔 Install"*"󰏗"*) niri-launch-or-focus-tui --floating --center --name PkgInstall niri-pkg-install ;;
+    *"AUR"*) niri-launch-or-focus-tui --floating --center --name AURInstall niri-pkg-aur-install ;;
+    *"Web App"*) niri-launch-or-focus-tui --floating --center --name WebAppInstall niri-webapp-install ;;
+    *"TUI App"*) niri-launch-or-focus-tui --floating --center --name TUIInstall niri-tui-install ;;
+    
+    # Remove
+    *Remove*Package* | *"󱧖 Remove"*"󱧖"*) niri-launch-or-focus-tui --floating --center --name PkgRemove niri-pkg-remove ;;
+    *Remove*"My App"*) niri-launch-or-focus-tui --floating --center --name AppRemove niri-custom-apps-remove ;;
+    *"Browse My Apps"*) niri-custom-apps-menu ;;
+    
+    # About
+    *"About Niruv"*) niri-launch-about ;;
+    
+    # System
+    *"Lock"*) swaylock ;;
+    *System*Screensaver*) niri-launch-screensaver force ;;
+    *Suspend*) systemctl suspend ;;
+    *Restart*) niri-launch-or-focus-tui --floating --center --name Confirm niri-cmd-reboot ;;
+    *Shutdown*) niri-launch-or-focus-tui --floating --center --name Confirm niri-cmd-shutdown ;;
+esac

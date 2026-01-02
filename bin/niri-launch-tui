@@ -45,27 +45,32 @@ if [[ -z "$APP_ID" ]]; then
     APP_ID="org.niri.$APP_NAME"
 fi
 
+# Get the bin directory where this script lives (for niri-* commands)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 # If --hold is set, wrap command to wait for keypress
 # Also auto-detect one-shot commands (not interactive TUIs)
 if [[ "$HOLD" == "true" ]]; then
     # Wrap in bash to show output and wait
-    FULL_CMD="$CMD $*; echo ''; echo 'Press any key to close...'; read -n1 -s"
+    # Prepend script directory to PATH so niri-* commands are found
+    FULL_CMD="export PATH=\"$SCRIPT_DIR:\$PATH\"; $CMD $*; echo ''; echo 'Press any key to close...'; read -n1 -s"
 else
-    FULL_CMD="$CMD $*"
+    # Prepend script directory to PATH so niri-* commands are found
+    FULL_CMD="export PATH=\"$SCRIPT_DIR:\$PATH\"; $CMD $*"
 fi
 
 # Check for available terminal and launch
-# Use bash -ic (interactive) to enable colors and source user's bashrc
+# Use bash -c (not -i) to avoid bashrc issues, but set up colors
 if command -v alacritty >/dev/null; then
-    exec setsid alacritty --class="$APP_ID" -e bash -ic "$FULL_CMD" &>/dev/null &
+    setsid --fork alacritty --class="$APP_ID" -e bash -c "$FULL_CMD" &>/dev/null
 elif command -v foot >/dev/null; then
-    exec setsid foot -a "$APP_ID" bash -ic "$FULL_CMD" &>/dev/null &
+    setsid --fork foot -a "$APP_ID" bash -c "$FULL_CMD" &>/dev/null
 elif command -v kitty >/dev/null; then
-    exec setsid kitty --class="$APP_ID" bash -ic "$FULL_CMD" &>/dev/null &
+    setsid --fork kitty --class="$APP_ID" bash -c "$FULL_CMD" &>/dev/null
 elif command -v ghostty >/dev/null; then
-    exec setsid ghostty --class="$APP_ID" -e bash -ic "$FULL_CMD" &>/dev/null &
+    setsid --fork ghostty --class="$APP_ID" -e bash -c "$FULL_CMD" &>/dev/null
 elif command -v xdg-terminal-exec >/dev/null; then
-    exec setsid xdg-terminal-exec --app-id="$APP_ID" -e bash -ic "$FULL_CMD" &>/dev/null &
+    setsid --fork xdg-terminal-exec --app-id="$APP_ID" -e bash -c "$FULL_CMD" &>/dev/null
 else
     echo "No suitable terminal found." >&2
     exit 1

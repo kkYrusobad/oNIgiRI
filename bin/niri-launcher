@@ -1,0 +1,39 @@
+#!/bin/bash
+
+# niri-launcher: Unified launcher with consistent sizing
+# Mode picker -> native fuzzel (apps) or flat menu (all items searchable)
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export PATH="$SCRIPT_DIR:$PATH"
+
+# Consistent fuzzel styling - same size everywhere
+FUZZEL_OPTS=(
+    "--font=JetBrainsMono Nerd Font:size=12"
+    "--background=282828e6"
+    "--text-color=fbf1c7ff"
+    "--selection-color=3c3836e6"
+    "--selection-text-color=b8bb26ff"
+    "--border-color=57514eff"
+    "--match-color=fabd2fff"
+    "--horizontal-pad=16"
+    "--vertical-pad=12"
+    "--inner-pad=8"
+    "--icon-theme=Papirus"
+    "--width=50"
+    "--lines=15"
+)
+
+# Mode picker
+choice=$(printf '%s\n' "󰀻  Apps" "󰻀  Menu" | fuzzel --dmenu \
+    --prompt "  " \
+    "${FUZZEL_OPTS[@]}" \
+    2>/dev/null)
+
+case "$choice" in
+    *Apps*)
+        exec fuzzel "${FUZZEL_OPTS[@]}"
+        ;;
+    *Menu*)
+        exec "$SCRIPT_DIR/niri-menu-flat"
+        ;;
+esac
