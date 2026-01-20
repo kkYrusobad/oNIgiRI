@@ -1,0 +1,21 @@
+#!/bin/bash
+
+# niri-show-logo: Display the oNIgiRI logo with Noctalia-inspired aesthetics
+
+# Path to the logo asset
+LOGO_FILE="/home/kky/garbage/editniri/niri-omarchy-port/branding/logo.txt"
+
+# Noctalia mPrimary (green) equivalent for the logo
+PRIMARY_COLOR="\033[38;2;184;187;38m" # #b8bb26
+RESET_COLOR="\033[0m"
+
+clear
+if [[ -f "$LOGO_FILE" ]]; then
+    echo -e "${PRIMARY_COLOR}"
+    cat "$LOGO_FILE"
+    echo -e "${RESET_COLOR}"
+else
+    # Fallback to simple text if logo file is missing
+    echo -e "${PRIMARY_COLOR}oNIgiRI - Niri Omarchy Port${RESET_COLOR}"
+fi
+echo
