@@ -3,7 +3,8 @@
 # niri-show-logo: Display the oNIgiRI logo with Noctalia-inspired aesthetics
 
 # Path to the logo asset
-LOGO_FILE="/home/kky/garbage/editniri/niri-omarchy-port/branding/logo.txt"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LOGO_FILE="$SCRIPT_DIR/../branding/logo.txt"
 
 # Noctalia mPrimary (green) equivalent for the logo
 PRIMARY_COLOR="\033[38;2;184;187;38m" # #b8bb26

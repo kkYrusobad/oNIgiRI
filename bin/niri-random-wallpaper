@@ -1,7 +1,7 @@
 #!/bin/bash
 # Random wallpaper setter for Niruv
 
-WALLPAPER_DIR="/home/kky/Pictures/Wallpapers"
+WALLPAPER_DIR="${HOME}/Pictures/Wallpapers"
 
 # Kill existing swaybg
 pkill -x swaybg 2>/dev/null
