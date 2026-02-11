@@ -386,6 +386,14 @@ binds {
         geometry-corner-radius 10 // Set every window radius to 20
         clip-to-geometry true
     }
+    // Float ghost windows with empty app-id AND empty title (e.g. Vivaldi notifications)
+    window-rule {
+        match app-id=r#"^$"# title=r#"^$"#
+        open-floating true
+        open-focused true
+        default-floating-position x=8 y=8 relative-to="top-right"
+        default-column-width { fixed 400; }
+    }
     window-rule {
     	// Match any app-id containing "vivaldi" or "zen" (case insensitive)
     	match app-id="(?i)(vivaldi|zen|antigravity|codium|dev.zed.Zed)"
